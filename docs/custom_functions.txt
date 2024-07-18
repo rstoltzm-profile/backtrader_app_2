@@ -1,0 +1,30 @@
+class LeanHullMovingAverage(bt.Indicator):
+    alias = ('LeanHMA',)
+    lines = ('lean_hma',)
+    params = (
+        ('period', 30),
+        ('data_source', None),
+        ('_movav', bt.indicators.WMA),
+    )
+
+    def __init__(self):
+        data_source = self.params.data_source if self.params.data_source is not None else self.data
+        self.fast_wma = self.params._movav(data_source, period=round(self.params.period * 1.0 / 2))
+        self.slow_wma = self.params._movav(data_source, period=self.params.period)
+        k = round(math.sqrt(self.params.period))
+        self.hull_ma = self.params._movav(2.0 * self.fast_wma - self.slow_wma, period=k)
+
+        self.lines.lean_hma = self.hull_ma
+        self.addminperiod(self.params.period + k - 1)
+
+class HullATR(bt.Indicator):
+    alias = ('HATR',)
+    lines = ('hatr',)
+    params = (
+        ('period', 14),
+        ('movav', LeanHullMovingAverage),
+    )
+
+    def __init__(self):
+        tr = bt.indicators.TrueRange(self.data)
+        self.lines.hatr = self.params.movav(tr, period=self.params.period)
